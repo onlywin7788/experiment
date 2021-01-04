@@ -29,30 +29,48 @@ char* getCurrentTime()
 	return timeBuffer;
 }
 
+void writeFileContents(char* logPath, char* contents)
+{
+	FILE* f;
+
+	f = fopen(logPath, "at");
+	if (f != NULL) {
+		fputs(contents, f);
+		fclose(f);
+	}
+}
+
 int main(int argc, char** argv)
 {
+	if (argc != 3) {
+		printf("[PROGRAM] [INTERVAL SEC] [LOG_PATH]\n\n");
+		return -1;
+	}
+
 	int sleepTime = atoi(argv[1]);
-
-
 	sleepTime *= 1000;
+	char contents[2048] = { 0x00, };
+	char logPath[2048] = { 0x00, };
 
 	MEMORYSTATUSEX memInfo;
 	memInfo.dwLength = sizeof(MEMORYSTATUSEX);
 
+	strcpy(logPath, argv[2]);
 
 	while (true)
 	{
+		memset(contents, 0x00, 2048);
+
 		GlobalMemoryStatusEx(&memInfo);
-		DWORDLONG totalPhysMem = memInfo.ullTotalPhys; // 사용량
-		DWORDLONG availPhyMem = memInfo.ullAvailPhys; // 사용 가능
-		DWORDLONG usedPhyMem = memInfo.ullTotalPhys - memInfo.ullAvailPhys;
+		DWORDLONG totalPhysMem = memInfo.ullTotalPhys / 1048576; // 사용량 (MB)
+		DWORDLONG availPhyMem = memInfo.ullAvailPhys / 1048576; // 사용 가능 (MB)
+		DWORDLONG usedPhyMem = totalPhysMem - availPhyMem; // 사용 중 (MB)
 
-		printf("%s,%llu,%llu,%llu", getCurrentTime(), totalPhysMem, usedPhyMem, availPhyMem);
+		sprintf(contents, "%s,%llu,%llu,%llu\n", getCurrentTime(), totalPhysMem, usedPhyMem, availPhyMem);
+
+		writeFileContents(logPath, contents);
+
 		Sleep(sleepTime);
-		printf("\n");
 	}
-
-	printf("\n\n\n");
-
 	return 0;
 }
